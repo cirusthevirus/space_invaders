@@ -41,7 +41,8 @@ def game_over():
     title_text_rect.center = window_w / 2, window_h / 2
     window.blit(title_text_surf, title_text_rect)
 
-    key_text_surf, key_text_rect = make_text_obj("Press 'x' to continue",                                         small_font)
+    key_text_surf, key_text_rect = make_text_obj("Press 'x' to continue",
+                                                 small_font)
     key_text_rect.center = window_w / 2, window_h / 2 + 100
     window.blit(key_text_surf, key_text_rect)
 
