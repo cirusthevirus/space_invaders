@@ -26,6 +26,7 @@ options = {N: (0, -3),
            NW: (-7, -3),
            NE: (7, -3)}
 
+BULLET_IMG = pygame.image.load('sprites/bullet.png')
 
 class Enemy(object):
     '''Single enemy space ship instance'''
@@ -44,11 +45,12 @@ class Enemy(object):
         self.delete = False
 
     def collision(self):
-        for bullet in self.player.get_bullets():
-            if self.x <= bullet[0] <= self.x + self.width and \
-                        self.y <= bullet[1] <= self.y + self.height:
-                self.alive = False
-                self.player.del_bullet(bullet)
+        if self.alive:
+            for bullet in self.player.get_bullets():
+                if self.x <= bullet[0] <= self.x + self.width and \
+                            self.y <= bullet[1] <= self.y + self.height:
+                    self.alive = False
+                    self.player.del_bullet(bullet)
 
     def killed_player(self):
         '''Check if player is dead'''
@@ -61,7 +63,7 @@ class Enemy(object):
         return False
 
 
-    def draw(self):
+    def draw(self, bullet_speed):
         '''Draw enemy to window'''
         # Check if alien died
         self.collision()
@@ -72,18 +74,20 @@ class Enemy(object):
             self.delete = True
         # Draw bullets
         for bullet in self._bullet_list:
-            bullet[1] += 8
+            bullet[1] += bullet_speed
             if bullet[1] > self.window.height:
                 self._bullet_list.remove(bullet)
-            pygame.draw.circle(self.window.surf, RED, bullet, 4)
+
+            self.window.surf.blit(BULLET_IMG, [bullet[0] - 5, bullet[1] - 17])
+            # pygame.draw.circle(self.window.surf, RED, bullet, 4)
 
 
-    def move(self):
+    def move(self, shoot_rate):
         '''Moves spaceship randomly'''
         # If alive shoot every 8 frames
         if self.alive:
             self.counter += 1
-            if self.counter > 8:
+            if self.counter > shoot_rate:
                 self.counter = 0
                 self.shoot()
 
@@ -111,7 +115,8 @@ class Enemy(object):
                     self.y += options[self.dir][1]
 
     def shoot(self):
-        self._bullet_list.append([int(self.x), int(self.y)])
+        self._bullet_list.append([int(self.x + self.width / 2), int(self.y + \
+                self.height)])
 
     def reset(self):
         self.counter = 0
@@ -121,6 +126,30 @@ class Enemy(object):
         self.dir = S
         self.alive = True
         self.delete = False
+
+
+class Boss(Enemy):
+    def __init__(self, image_path, width, height, window, player):
+        super().__init__(image_path, width, height, window, player)
+        self.lives = 15
+
+    def collision(self):
+        if self.alive:
+            for bullet in self.player.get_bullets():
+                if self.x <= bullet[0] <= self.x + self.width and \
+                            self.y <= bullet[1] <= self.y + self.height:
+                    self.lives -= 1
+                    self.player.del_bullet(bullet)
+            if self.lives < 0:
+                self.alive = False
+
+    def shoot(self):
+        self._bullet_list.append([int(self.x + self.width / 4), int(self.y + \
+            self.height)])
+        self._bullet_list.append([int(self.x + self.width / 2), int(self.y + \
+                self.height)])
+        self._bullet_list.append([int(self.x + self.width / 4 * 3), int(self.y\
+            + self.height)])
 
 
 
@@ -137,6 +166,8 @@ class EnemyGenerator(object):
         self.enemies = {}
 
     def update(self, score):
+        bullet_speed = 4
+        shoot_rate = 12
         if self.reference == int(time.time()) - 5 and not self.generated:
             self.generated = True
             self.reference = int(time.time())
@@ -149,5 +180,18 @@ class EnemyGenerator(object):
         elif self.reference != int(time.time()) and self.generated:
             self.generated = False
 
+        if score % 13 == 0 and score > 0:
+            if not 'boss' in self.enemies.keys():
+                self.enemies['boss'] = Boss('sprites/boss.png',
+                        100, 100, self.window, self.player)
 
+        if score > 10:
+            bullet_speed = 6
+            if score > 20:
+                shoot_rate = 10
+                if score > 30:
+                    bullet_speed = 8
+                    if score > 45:
+                        bullet_speed = 8
 
+        return bullet_speed, shoot_rate
