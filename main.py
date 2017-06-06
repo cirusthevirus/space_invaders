@@ -83,8 +83,10 @@ def main():
     move = 0
     score = 0
     aliens.init()
+    bullet_speed = 4
+    shoot_rate = 12
     while True:
-        aliens.update(score)
+        bullet_speed, shoot_rate = aliens.update(score)
         dead_aliens = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -121,7 +123,7 @@ def main():
 
         player1.move(move)
         for enemy in aliens.enemies.values():
-            enemy.move()
+            enemy.move(shoot_rate)
 
 
         # Main loop
@@ -135,9 +137,11 @@ def main():
         for key in dead_aliens:
             aliens.enemies.pop(key, None)
             score += 1
+            if key == 'boss':
+                score += 2
 
         for enemy in aliens.enemies.values():
-            enemy.draw()
+            enemy.draw(bullet_speed)
 
         draw_score(score)
 
