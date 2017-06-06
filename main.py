@@ -5,6 +5,7 @@
 
 import pygame
 import time
+import window
 import player
 import adversary
 
@@ -14,37 +15,34 @@ WHITE = (255, 255, 255)
 # Frames per second definition
 FPS = 60
 
-# Initialise pygame
-pygame.init()
+# Initialise pygame window
+window = window.Window(500, 800)
+window.set_title('Space Invaders')
+window.set_background('sprites/space.jpeg')
 
-# Set window
-window_w = 500
-window_h = 800
-window = pygame.display.set_mode((window_w, window_h))
-background = pygame.image.load('sprites/space.jpeg')
-pygame.display.set_caption('Space Invaders')
-# Time tracker
+# Other constants (after pygame init called in Window.__init__)
+SCORE_FONT = pygame.font.Font('freesansbold.ttf', 20)
+AMMO_FONT = pygame.font.Font('freesansbold.ttf', 15)
+
+# Initialise clock
 clock = pygame.time.Clock()
 
-player1 = player.Player(window_w/2 - 13, window_h - 70,
-                        'sprites/player_icon.png',
-                        26, 60)
-
-enemy1 = adversary.Enemy('sprites/alien_1.png', 34, 45,
-                         window_w, window_h, player1)
+# Initialise player and adversaries
+player1 = player.Player(window, 'sprites/player_icon.png', 26, 60)
+aliens = adversary.EnemyGenerator(window, player1)
 
 def game_over():
     small_font = pygame.font.Font('freesansbold.ttf', 15)
     large_font = pygame.font.Font('freesansbold.ttf', 70)
 
     title_text_surf, title_text_rect = make_text_obj('Game Over!', large_font)
-    title_text_rect.center = window_w / 2, window_h / 2
-    window.blit(title_text_surf, title_text_rect)
+    title_text_rect.center = window.width / 2, window.height / 2
+    window.surf.blit(title_text_surf, title_text_rect)
 
     key_text_surf, key_text_rect = make_text_obj("Press 'x' to continue",
                                                  small_font)
-    key_text_rect.center = window_w / 2, window_h / 2 + 100
-    window.blit(key_text_surf, key_text_rect)
+    key_text_rect.center = window.width / 2, window.height / 2 + 100
+    window.surf.blit(key_text_surf, key_text_rect)
 
     pygame.display.update()
     time.sleep(0.5)
@@ -53,7 +51,8 @@ def game_over():
         clock.tick()
 
     player1.reset()
-    enemy1.reset()
+    for enemy in aliens.enemies.values():
+        enemy.reset()
     main()
 
 def replay_or_quit():
@@ -65,16 +64,28 @@ def replay_or_quit():
             if event.key == pygame.K_x:
                 pygame.event.clear()
                 return True
+            elif event.key == pygame.K_ESCAPE:
+                pygame.quit()
+                quit()
     return None
 
 def make_text_obj(text, font):
     text_surf = font.render(text, True, WHITE)
     return text_surf, text_surf.get_rect()
 
+def draw_score(score):
+    text = SCORE_FONT.render('Score: {0}'.format(score), True, WHITE)
+    window.surf.blit(text, [0, 0])
+
 
 def main():
+    # Initialise score enemies and player movement
     move = 0
+    score = 0
+    aliens.init()
     while True:
+        aliens.update(score)
+        dead_aliens = []
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -103,18 +114,37 @@ def main():
 
         if keys_pressed[pygame.K_SPACE]:
             player1.shoot()
+        else:
+            player1.update_ammo()
 
 
-        player1.move(move, window_w, window_h)
-        enemy1.move(window_w, window_h)
+
+        player1.move(move)
+        for enemy in aliens.enemies.values():
+            enemy.move()
 
 
         # Main loop
-        window.blit(background, (0, 0))
-        player1.draw(window)
-        if not enemy1.delete:
-            if enemy1.draw(window):
+        window.draw()
+        player1.draw(AMMO_FONT)
+
+        for key, enemy in aliens.enemies.items():
+            if enemy.delete:
+                dead_aliens.append(key)
+
+        for key in dead_aliens:
+            aliens.enemies.pop(key, None)
+            score += 1
+
+        for enemy in aliens.enemies.values():
+            enemy.draw()
+
+        draw_score(score)
+
+        for enemy in aliens.enemies.values():
+            if enemy.killed_player():
                 game_over()
+
 
         pygame.display.update()
         clock.tick(FPS)

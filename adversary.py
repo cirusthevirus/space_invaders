@@ -2,8 +2,8 @@
 '''Adversaries module to create threats for player'''
 
 import pygame
-import player
 import random
+import time
 
 # RGB colour definitions
 RED = (255, 0, 0)
@@ -29,18 +29,17 @@ options = {N: (0, -3),
 
 class Enemy(object):
     '''Single enemy space ship instance'''
-    def __init__(self, image_path, width, height, width_lim, height_lim, pl):
+    def __init__(self, image_path, width, height, window, player):
         self.counter = 0
-        self.x = random.randrange(0, width_lim-width)
+        self.x = random.randrange(0, window.width-width)
         self.y = -height
         self._image = pygame.image.load(image_path)
         self.height = height
         self.width = width
         self._bullet_list = []
         self.dir = S
-        self.window_h_lim = height_lim
-        self.window_w_lim = width_lim
-        self.player = pl
+        self.window = window
+        self.player = player
         self.alive = True
         self.delete = False
 
@@ -51,33 +50,35 @@ class Enemy(object):
                 self.alive = False
                 self.player.del_bullet(bullet)
 
-        # Check if player is dead
+    def killed_player(self):
+        '''Check if player is dead'''
         for bullet in self._bullet_list:
-            if self.player.x <= bullet[0] <= self.player.x + self.player.width\
-                    and self.player.y <= bullet[1] <= self.player.y +\
-                    self.player.height:
+            if self.player.x + 3 <= bullet[0] <= self.player.x + \
+                    self.player.width - 3 and self.player.y + 5 <= bullet[1] \
+                    <= self.player.y + self.player.height - 5:
                 return True
 
         return False
 
 
-    def draw(self, window):
+    def draw(self):
         '''Draw enemy to window'''
+        # Check if alien died
+        self.collision()
         # If not dead draw ship
         if self.alive:
-            window.blit(self._image, (self.x, self.y))
+            self.window.surf.blit(self._image, (self.x, self.y))
         elif not self._bullet_list:
             self.delete = True
         # Draw bullets
         for bullet in self._bullet_list:
             bullet[1] += 8
-            if bullet[1] > self.window_h_lim:
+            if bullet[1] > self.window.height:
                 self._bullet_list.remove(bullet)
-            pygame.draw.circle(window, RED, bullet, 4)
-        # Check for collisions
-        return self.collision()
+            pygame.draw.circle(self.window.surf, RED, bullet, 4)
 
-    def move(self, width_lim, height_lim):
+
+    def move(self):
         '''Moves spaceship randomly'''
         # If alive shoot every 8 frames
         if self.alive:
@@ -102,9 +103,11 @@ class Enemy(object):
             if self.y < 0:
                 self.y += options[S][1]
             else:      # Perform movement if in window
-                if 0 < self.x + options[self.dir][0] < width_lim-self.width:
+                if 0 < self.x + options[self.dir][0] < \
+                        self.window.width - self.width:
                     self.x += options[self.dir][0]
-                if 0 < self.y + options[self.dir][1] < height_lim-self.height:
+                if 0 < self.y + options[self.dir][1] < \
+                        self.window.height - self.height:
                     self.y += options[self.dir][1]
 
     def shoot(self):
@@ -112,10 +115,39 @@ class Enemy(object):
 
     def reset(self):
         self.counter = 0
-        self.x = random.randrange(0, self.window_w_lim-self.width)
+        self.x = random.randrange(0, self.window.width-self.width)
         self.y = -self.height
         self._bullet_list = []
         self.dir = S
         self.alive = True
         self.delete = False
+
+
+
+class EnemyGenerator(object):
+    def __init__(self, window, player):
+        self.enemies = {}
+        self.window = window
+        self.player = player
+
+    def init(self):
+        self.reference = int(time.time())
+        self.generated = False
+        self.current_key = 0
+        self.enemies = {}
+
+    def update(self, score):
+        if self.reference == int(time.time()) - 5 and not self.generated:
+            self.generated = True
+            self.reference = int(time.time())
+            # Add difficulty based on level
+            for index in range(0, min(score//10 + 1, 3)):
+                self.current_key += 1
+                self.enemies[self.current_key] = Enemy('sprites/alien_1.png',
+                        34, 45, self.window, self.player)
+
+        elif self.reference != int(time.time()) and self.generated:
+            self.generated = False
+
+
 
