@@ -37,14 +37,14 @@ class Player(object):
         '''Draws player on window'''
         self.window.surf.blit(self._image, (self.x, self.y))
         for bullet in self._bullet_list:
-            bullet[1] -= 10
+            bullet[1] -= 15
             if bullet[1] < 0:
                 self._bullet_list.remove(bullet)
             pygame.draw.circle(self.window.surf, BLACK, bullet, 2)
 
         ## Draw ammo counter
-        if self.ammo > 0:
-            text = ammo_font.render('Ammo: {0}'.format(self.ammo), True,
+        if self.ammo > 3:
+            text = ammo_font.render('Ammo: {0}'.format(self.ammo//4), True,
                     WHITE)
         else:
             text = ammo_font.render('Ammo: 0', True, RED)
@@ -71,8 +71,8 @@ class Player(object):
         self._v_speed = val
 
     def shoot(self):
-        if self.ammo > 0:
-            self.ammo -= 1
+        if self.ammo > 1:
+            self.ammo -= 4
             self._bullet_list.append([int(self.x + self.width/2), int(self.y)])
 
     def get_bullets(self):
